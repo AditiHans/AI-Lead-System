@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pandas
+requests
+ddgs
+duckduckgo-search

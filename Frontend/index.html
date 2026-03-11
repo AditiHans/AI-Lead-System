@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Lead Discovery Dashboard</title>
+
+<style>
+
+:root{
+--bg:#f6f8fc;
+--card:#ffffffcc;
+--text:#1f2937;
+--accent:#6366f1;
+--accent2:#8b5cf6;
+--border:#e5e7eb;
+}
+
+body.dark{
+--bg:#0f172a;
+--card:#1e293bcc;
+--text:#e5e7eb;
+--accent:#818cf8;
+--accent2:#a78bfa;
+--border:#334155;
+}
+
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:system-ui;
+background:linear-gradient(135deg,#e0e7ff,#fdf2f8);
+background-size:200% 200%;
+animation:bgmove 12s ease infinite;
+color:var(--text);
+}
+
+body.dark{
+background:linear-gradient(135deg,#0f172a,#020617);
+}
+
+@keyframes bgmove{
+0%{background-position:0% 50%}
+50%{background-position:100% 50%}
+100%{background-position:0% 50%}
+}
+
+header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 40px;
+}
+
+h1{
+margin:0;
+font-weight:600;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+padding:20px;
+}
+
+.card{
+background:var(--card);
+backdrop-filter:blur(10px);
+border-radius:14px;
+padding:25px;
+box-shadow:0 20px 40px rgba(0,0,0,0.08);
+transition:.3s;
+}
+
+.controls{
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+margin-bottom:20px;
+}
+
+select,button{
+padding:10px 14px;
+border-radius:8px;
+border:1px solid var(--border);
+background:white;
+cursor:pointer;
+}
+
+body.dark select,
+body.dark button{
+background:#0f172a;
+color:white;
+}
+
+button.primary{
+background:linear-gradient(135deg,var(--accent),var(--accent2));
+border:none;
+color:white;
+}
+
+button.primary:hover{
+transform:translateY(-1px);
+}
+
+button.toggle{
+border:none;
+background:var(--accent);
+color:white;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th,td{
+padding:12px;
+border-bottom:1px solid var(--border);
+text-align:left;
+}
+
+th{
+font-weight:600;
+font-size:14px;
+}
+
+tr:hover{
+background:rgba(99,102,241,0.1);
+}
+
+.badge{
+padding:4px 8px;
+border-radius:6px;
+font-size:12px;
+font-weight:600;
+}
+
+.hot{background:#ef4444;color:white;}
+.warm{background:#f59e0b;color:white;}
+.cold{background:#3b82f6;color:white;}
+
+.progress{
+height:6px;
+background:#e5e7eb;
+border-radius:4px;
+margin-top:4px;
+}
+
+.bar{
+height:100%;
+background:linear-gradient(90deg,#6366f1,#8b5cf6);
+border-radius:4px;
+}
+
+.loader{
+display:none;
+text-align:center;
+padding:20px;
+font-size:18px;
+}
+
+.actions{
+display:flex;
+gap:6px;
+}
+
+button.small{
+font-size:12px;
+padding:6px 8px;
+}
+
+footer{
+text-align:center;
+margin-top:20px;
+opacity:.6;
+font-size:13px;
+}
+
+@media(max-width:700px){
+
+table{
+font-size:13px;
+}
+
+.controls{
+flex-direction:column;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>🚀 AI Lead Discovery</h1>
+
+<div>
+<button class="toggle" onclick="toggleMode()">🌙</button>
+<button onclick="exportCSV()">📁 Export CSV</button>
+</div>
+
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<div class="controls">
+
+<select id="segment">
+<option value="travel">✈️ Travel</option>
+<option value="edtech">🎓 EdTech</option>
+<option value="ecommerce">🛍 Ecommerce</option>
+</select>
+
+<button class="primary" onclick="discover()">Discover Leads</button>
+
+</div>
+
+<div id="loader" class="loader">
+🔎 Discovering merchants...
+</div>
+
+<table>
+
+<thead>
+<tr>
+<th>Domain</th>
+<th>Website</th>
+<th>Score</th>
+<th>Priority</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody id="tableBody"></tbody>
+
+</table>
+
+</div>
+
+<footer>
+AI Lead Discovery System
+</footer>
+
+</div>
+
+<script>
+
+const API_BASE="http://127.0.0.1:8000"
+
+let currentLeads=[]
+
+function toggleMode(){
+document.body.classList.toggle("dark")
+}
+
+function priority(score){
+
+if(score>=80) return "HOT"
+if(score>=50) return "WARM"
+return "COLD"
+
+}
+
+function badgeClass(p){
+
+if(p==="HOT") return "hot"
+if(p==="WARM") return "warm"
+return "cold"
+
+}
+
+function copy(text){
+
+navigator.clipboard.writeText(text)
+
+}
+
+function scoreBar(score){
+
+return `
+<div class="progress">
+<div class="bar" style="width:${score}%"></div>
+</div>
+`
+
+}
+
+async function discover(){
+
+const seg=document.getElementById("segment").value
+const loader=document.getElementById("loader")
+const table=document.getElementById("tableBody")
+
+table.innerHTML=""
+loader.style.display="block"
+
+try{
+
+const res=await fetch(`${API_BASE}/discover/${seg}`)
+console.log(res);
+const data=await res.json()
+console.log(data);
+loader.style.display="none"
+
+currentLeads=data.leads
+
+data.leads.forEach(l=>{
+
+const p=priority(l.priority_score)
+
+const row=document.createElement("tr")
+
+row.innerHTML=`
+
+<td>${l.domain}</td>
+
+<td>
+<a href="${l.website}" target="_blank">visit</a>
+</td>
+
+<td>
+${l.priority_score}
+${scoreBar(l.priority_score)}
+</td>
+
+<td>
+<span class="badge ${badgeClass(p)}">${p}</span>
+</td>
+
+<td class="actions">
+
+<button class="small" onclick="copy('${l.domain}')">📋</button>
+
+<button class="small" onclick="window.open('${l.website}')">🌐</button>
+
+</td>
+
+`
+
+table.appendChild(row)
+
+})
+
+}catch(e){
+
+loader.innerText="⚠ API Error"
+
+}
+
+}
+
+function exportCSV(){
+
+if(currentLeads.length===0)return
+
+let csv="domain,website,score\n"
+
+currentLeads.forEach(l=>{
+csv+=`${l.domain},${l.website},${l.priority_score}\n`
+})
+
+const blob=new Blob([csv])
+const url=URL.createObjectURL(blob)
+
+const a=document.createElement("a")
+a.href=url
+a.download="leads.csv"
+a.click()
+
+}
+
+</script>
+
+</body>
+</html>

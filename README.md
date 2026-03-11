@@ -127,8 +127,8 @@ ai-lead-system
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-lead-system.git
-cd ai-lead-system
+git clone https://github.com/AditiHans/AI-Lead-System.git
+cd ai-lead-system/Backend
 ```
 
 ---

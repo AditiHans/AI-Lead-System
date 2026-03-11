@@ -1,17 +1,19 @@
+import os
+from dotenv import load_dotenv
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ai_lead_system import run_pipeline
 
-app = FastAPI(title="AI Lead Discovery API")
+load_dotenv()
 
-# Allow frontend requests
-origins = [
-    "*"
-]
+app = FastAPI()
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
